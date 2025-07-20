@@ -31,17 +31,19 @@ import (
 	"fmt"
 	"time"
 
-    "github.com/xnacly/go-iso8601-duration"
+        "github.com/xnacly/go-iso8601-duration"
 )
 
 func main() {
 	rawDuration := "PT1H30M12S"
 	duration, err := goiso8601duration.From(rawDuration)
 	if err != nil {
-		panic(duration)
+		panic(err)
 	}
 
+        // 1h30m12s PT1H30M12S
 	fmt.Println(duration.Duration().String(), duration.String())
+        // 01:00:00 02:30:12
 	fmt.Println(
 		time.
 			Unix(0, 0).

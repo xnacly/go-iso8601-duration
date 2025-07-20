@@ -12,7 +12,7 @@ func TestReadme(t *testing.T) {
 	rawDuration := "PT1H30M12S"
 	duration, err := From(rawDuration)
 	if err != nil {
-		panic(duration)
+		panic(err)
 	}
 
 	fmt.Println(duration.Duration().String(), duration.String())
