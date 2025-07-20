@@ -8,14 +8,14 @@ import (
 var (
 	UnexpectedEof                  = errors.New("Unexpected EOF in duration format string")
 	UnexpectedReaderError          = errors.New("Failed to retrieve next byte of duration format string")
-	UnexpectedNonAsciiRune         = errors.New("Unexpected non ascii rune in duration format string")
-	DuplicateDesignator            = errors.New("Duplicate designator")
+	UnexpectedNonAsciiRune         = errors.New("Unexpected non ascii component in duration format string")
 	MissingDesignator              = errors.New("Missing unit designator")
-	UnknownDesignator              = errors.New("Unknown designator")
+	UnknownDesignator              = errors.New("Unknown designator, expected YMWD or after a T, HMS")
+	DuplicateDesignator            = errors.New("Duplicate designator")
 	MissingNumber                  = errors.New("Missing number specifier before unit designator")
 	TooManyNumbersForDesignator    = errors.New("Only 2 numbers before any designator allowed")
 	MissingPDesignatorAtStart      = errors.New("Missing [P] designator at the start of the duration format string")
-	NoDesignatorsAfterWeeksAllowed = errors.New("After [W] designator, no other designators are allowed")
+	NoDesignatorsAfterWeeksAllowed = errors.New("After [W] designator, no other numbers and designators are allowed")
 )
 
 type ISO8601DurationError struct {
