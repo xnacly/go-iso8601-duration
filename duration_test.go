@@ -1,6 +1,7 @@
 package goiso8601duration
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
@@ -8,14 +9,21 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestReadme(t *testing.T) {
-	rawDuration := "PT1H30M12S"
-	duration, err := From(rawDuration)
+func Must[T any](t T, err error) T {
 	if err != nil {
 		panic(err)
 	}
+	return t
+}
 
+func TestReadme(t *testing.T) {
+	rawDuration := "PT1H30M12S"
+	duration := Must(From(rawDuration))
+
+	// 1h30m12s PT1H30M12S
 	fmt.Println(duration.Duration().String(), duration.String())
+
+	// 01:00:00 02:30:12
 	fmt.Println(
 		time.
 			Unix(0, 0).
@@ -24,24 +32,47 @@ func TestReadme(t *testing.T) {
 			Apply(time.Unix(0, 0)).
 			Format(time.TimeOnly),
 	)
+
+	type arrival struct {
+		In Duration `json:"in"`
+	}
+
+	asJson := Must(
+		json.Marshal(
+			arrival{
+				In: FromDuration(
+					12*time.Minute + 43*time.Second,
+				),
+			},
+		),
+	)
+
+	// {"in":"PT12M43S"}
+	fmt.Println(string(asJson))
+
+	var a arrival
+	json.Unmarshal(asJson, &a)
+
+	// {In:PT12M43S}
+	fmt.Printf("%+v\n", a)
 }
 
 var testcases = []struct {
 	str string
-	dur ISO8601Duration
+	dur Duration
 }{
-	{"P0D", ISO8601Duration{}},
-	{"PT15H", ISO8601Duration{hour: 15}},
-	{"P1W", ISO8601Duration{week: 1}},
-	{"P15W", ISO8601Duration{week: 15}},
-	{"P15Y", ISO8601Duration{year: 15}},
-	{"P15Y3M", ISO8601Duration{year: 15, month: 3}},
-	{"P15Y3M41D", ISO8601Duration{year: 15, month: 3, day: 41}},
-	{"PT15M", ISO8601Duration{minute: 15}},
-	{"PT15M10S", ISO8601Duration{minute: 15, second: 10}},
+	{"P0D", Duration{}},
+	{"PT15H", Duration{hour: 15}},
+	{"P1W", Duration{week: 1}},
+	{"P15W", Duration{week: 15}},
+	{"P15Y", Duration{year: 15}},
+	{"P15Y3M", Duration{year: 15, month: 3}},
+	{"P15Y3M41D", Duration{year: 15, month: 3, day: 41}},
+	{"PT15M", Duration{minute: 15}},
+	{"PT15M10S", Duration{minute: 15, second: 10}},
 	{
 		"P3Y6M4DT12H30M5S",
-		ISO8601Duration{
+		Duration{
 			year:   3,
 			month:  6,
 			day:    4,
@@ -102,6 +133,33 @@ func TestDurationErr(t *testing.T) {
 		t.Run(i, func(t *testing.T) {
 			_, err := From(i)
 			assert.Error(t, err)
+		})
+	}
+}
+
+func TestJSONMarshalUnmarshal(t *testing.T) {
+	for _, tc := range testcases {
+		t.Run(tc.str, func(t *testing.T) {
+			data, err := json.Marshal(tc.dur)
+			assert.NoError(t, err)
+
+			expectedJSON := `"` + tc.str + `"`
+			assert.Equal(t, expectedJSON, string(data))
+
+			var unmarshaled Duration
+			err = json.Unmarshal(data, &unmarshaled)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.dur, unmarshaled)
+		})
+	}
+}
+
+func TestDurationRoundtrip(t *testing.T) {
+	for _, tc := range testcases {
+		t.Run(tc.str, func(t *testing.T) {
+			asTimeDuration := tc.dur.Duration()
+			asDur := FromDuration(asTimeDuration)
+			assert.Equal(t, asTimeDuration, asDur.Duration())
 		})
 	}
 }

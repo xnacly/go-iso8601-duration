@@ -1,6 +1,7 @@
 package goiso8601duration
 
 import (
+	"encoding/json"
 	"io"
 	"strconv"
 	"strings"
@@ -12,18 +13,18 @@ import (
 // designator, again, see: ISO8601 4.4.3.2 Format with designators
 const maxNumCount = 2
 
+// constants for roundtripping between time.Duration and Duration
+const (
+	nsPerSecond  = int64(time.Second)
+	nsPerMinute  = int64(time.Minute)
+	nsPerHour    = int64(time.Hour)
+	nsPerDay     = int64(24 * time.Hour)
+	nsPerWeek    = int64(7 * 24 * time.Hour)
+	daysPerYear  = 365.2425
+	daysPerMonth = 30.436875
+)
+
 // From is a FSM, see https://en.wikipedia.org/wiki/Finite-state_machine
-//
-// For instance, the state transitions for 'PT9M' are:
-//
-//	| State   | character |
-//	| ------- | --------- |
-//	| start   | 'P'       |
-//	| P       | 'T'       |
-//	| T       | '9'       |
-//	| Number  | 'M'       |
-//	| M       | EOF       |
-//	| Fin     |           |
 type state = uint8
 
 // In representations of duration,
@@ -38,9 +39,6 @@ const (
 	stateStart state = iota
 	// start of duration: is used as duration designator, preceding the component which represents the duration;
 	stateP
-
-	// seen [W]
-	stateWDesignator
 
 	// seen n
 	stateNumber
@@ -57,8 +55,41 @@ const (
 	stateFin
 )
 
-type ISO8601Duration struct {
+type Duration struct {
 	year, month, week, day, hour, minute, second float64
+}
+
+func FromDuration(d time.Duration) Duration {
+	ns := d.Nanoseconds()
+	duration := Duration{}
+
+	years := float64(ns) / (float64(nsPerDay) * daysPerYear)
+	duration.year = float64(int(years)) // truncate to integer years
+	ns -= int64(duration.year * daysPerYear * float64(nsPerDay))
+
+	months := float64(ns) / (float64(nsPerDay) * daysPerMonth)
+	duration.month = float64(int(months))
+	ns -= int64(duration.month * daysPerMonth * float64(nsPerDay))
+
+	weeks := ns / nsPerWeek
+	duration.week = float64(weeks)
+	ns -= weeks * nsPerWeek
+
+	days := ns / nsPerDay
+	duration.day = float64(days)
+	ns -= days * nsPerDay
+
+	hours := ns / nsPerHour
+	duration.hour = float64(hours)
+	ns -= hours * nsPerHour
+
+	minutes := ns / nsPerMinute
+	duration.minute = float64(minutes)
+	ns -= minutes * nsPerMinute
+
+	duration.second = float64(ns) / float64(nsPerSecond)
+
+	return duration
 }
 
 func numBufferToNumber(buf [maxNumCount]rune) int64 {
@@ -86,8 +117,8 @@ func numBufferToNumber(buf [maxNumCount]rune) int64 {
 //   - H is the hour designator that follows the value for the number of hours.
 //   - M is the minute designator that follows the value for the number of minutes.
 //   - S is the second designator that follows the value for the number of seconds.
-func From(s string) (ISO8601Duration, error) {
-	var duration ISO8601Duration
+func From(s string) (Duration, error) {
+	var duration Duration
 
 	if len(s) == 0 {
 		return duration, wrapErr(UnexpectedEof, 0)
@@ -250,7 +281,7 @@ func From(s string) (ISO8601Duration, error) {
 	}
 }
 
-func (i ISO8601Duration) Apply(t time.Time) time.Time {
+func (i Duration) Apply(t time.Time) time.Time {
 	newT := t.AddDate(int(i.year), int(i.month), int(i.day+i.week*7))
 	d := time.Duration(
 		(i.hour * float64(time.Hour)) +
@@ -260,16 +291,7 @@ func (i ISO8601Duration) Apply(t time.Time) time.Time {
 	return newT.Add(d)
 }
 
-func (i ISO8601Duration) Duration() time.Duration {
-	const (
-		nsPerSecond  = int64(time.Second)
-		nsPerMinute  = int64(time.Minute)
-		nsPerHour    = int64(time.Hour)
-		nsPerDay     = int64(24 * time.Hour)
-		nsPerWeek    = int64(7 * 24 * time.Hour)
-		daysPerYear  = 365.2425
-		daysPerMonth = 30.436875
-	)
+func (i Duration) Duration() time.Duration {
 
 	var ns int64
 
@@ -284,7 +306,7 @@ func (i ISO8601Duration) Duration() time.Duration {
 	return time.Duration(ns)
 }
 
-func (i ISO8601Duration) String() string {
+func (i Duration) String() string {
 	b := strings.Builder{}
 	b.WriteRune('P')
 
@@ -336,4 +358,23 @@ func (i ISO8601Duration) String() string {
 	}
 
 	return b.String()
+}
+
+func (i Duration) MarshalJSON() ([]byte, error) {
+	return json.Marshal(i.String())
+}
+
+func (i *Duration) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+
+	d, err := From(s)
+	if err != nil {
+		return err
+	}
+	*i = d
+
+	return nil
 }
