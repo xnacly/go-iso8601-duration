@@ -63,6 +63,7 @@ var testcases = []struct {
 }{
 	{"P0D", Duration{}},
 	{"PT15H", Duration{hour: 15}},
+	{"PT15H", Duration{hour: 15}},
 	{"P1W", Duration{week: 1}},
 	{"P15W", Duration{week: 15}},
 	{"P15Y", Duration{year: 15}},
@@ -160,6 +161,17 @@ func TestDurationRoundtrip(t *testing.T) {
 			asTimeDuration := tc.dur.Duration()
 			asDur := FromDuration(asTimeDuration)
 			assert.Equal(t, asTimeDuration, asDur.Duration())
+		})
+	}
+}
+
+func TestDurationNegativeSign(t *testing.T) {
+	for _, tc := range testcases {
+		t.Run(tc.str, func(t *testing.T) {
+			s := "-" + tc.str
+			parsed, err := From(s)
+			assert.NoError(t, err)
+			assert.Equal(t, -tc.dur.Duration(), parsed.Duration())
 		})
 	}
 }

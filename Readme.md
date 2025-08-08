@@ -10,8 +10,11 @@ go get github.com/xnacly/go-iso8601-duration
 
 ## Features
 
-- ISO8601 duration parsing formats: `P[nn]Y[nn]M[nn]DT[nn]H[nn]M[nn]S` or
-  `P[nn]W` via `goiso8601duration.From`
+- ISO8601 duration parsing formats: `[+-]P[n]Y[n]W[n]M[n]DT[n]H[n]M[n]S` via
+  `goiso8601duration.From`:
+    - aligned with [ECMAScript: Temporal - 7 Temporal.Duration
+      Objects](https://tc39.es/proposal-temporal/#sec-temporal-duration-objects)
+      and ISO8601
 - Interop with [`time.Time`](https://pkg.go.dev/time#Time) and
   [`time.Duration`](https://pkg.go.dev/time#Duration) via:
   - `goiso8601duration.Duration.Apply(time.Time) time.Time`
@@ -23,14 +26,6 @@ go get github.com/xnacly/go-iso8601-duration
   [`json.Unmarshaller`](https://pkg.go.dev/encoding/json#Unmarshaler) and
   [`json.Marshaller`](https://pkg.go.dev/encoding/json#Marshaler)
 - High quality errors with position context.
-
-## Non features
-
-> I am open to implement these, if someone needs them
-
-- Negative durations `(-P1Y)` -> because I don't have access to the newest spec, so I have no idea what it specifies
-- Fractional seconds `(PT1.5S)` -> technically this can be supported for the last / smallest unit, but I dont think its necessary
-- Arbitrary digit lengths -> spec says two digits is fine, so I'll keep it like that
 
 ## Example
 
