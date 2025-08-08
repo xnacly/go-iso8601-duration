@@ -32,8 +32,10 @@ type state = uint8
 // see the doc comment of the function
 //
 // [Y] [M] [W] [D] [H] [M] [S]
-const defaultDesignators = "YMWD"
-const timeDesignators = "MHS"
+const (
+	defaultDesignators = "YMWD"
+	timeDesignators    = "MHS"
+)
 
 const (
 	stateStart state = iota
@@ -56,6 +58,7 @@ const (
 )
 
 type Duration struct {
+	hasNegativeSign                              bool
 	year, month, week, day, hour, minute, second float64
 }
 
@@ -170,10 +173,17 @@ func From(s string) (Duration, error) {
 
 		switch curState {
 		case stateStart:
-			if b != 'P' {
+			switch b {
+			case '-':
+				duration.hasNegativeSign = true
+				curState = stateStart
+			case '+':
+				curState = stateStart
+			case 'P':
+				curState = stateP
+			default:
 				return duration, wrapErr(MissingPDesignatorAtStart, col)
 			}
-			curState = stateP
 		case stateP, stateDesignator:
 			if b == 'T' {
 				curState = stateT
@@ -288,11 +298,13 @@ func (i Duration) Apply(t time.Time) time.Time {
 			(i.minute * float64(time.Minute)) +
 			(i.second * float64(time.Second)),
 	)
+	if i.hasNegativeSign {
+		d = -d
+	}
 	return newT.Add(d)
 }
 
 func (i Duration) Duration() time.Duration {
-
 	var ns int64
 
 	ns += int64(i.year * daysPerYear * float64(nsPerDay))
@@ -303,12 +315,19 @@ func (i Duration) Duration() time.Duration {
 	ns += int64(i.minute * float64(nsPerMinute))
 	ns += int64(i.second * float64(nsPerSecond))
 
+	if i.hasNegativeSign {
+		ns = -ns
+	}
+
 	return time.Duration(ns)
 }
 
 func (i Duration) String() string {
 	b := strings.Builder{}
-	b.WriteRune('P')
+	if i.hasNegativeSign {
+		b.WriteByte('-')
+	}
+	b.WriteByte('P')
 
 	// If the number of years, months, days, hours, minutes or seconds in any of these expressions equals
 	// zero, the number and the corresponding designator may be absent; however, at least one number
@@ -320,40 +339,40 @@ func (i Duration) String() string {
 
 	if i.week > 0 {
 		b.WriteString(strconv.FormatFloat(i.week, 'g', -1, 64))
-		b.WriteRune('W')
+		b.WriteByte('W')
 		return b.String()
 	}
 
 	if i.year > 0 {
 		b.WriteString(strconv.FormatFloat(i.year, 'g', -1, 64))
-		b.WriteRune('Y')
+		b.WriteByte('Y')
 	}
 	if i.month > 0 {
 		b.WriteString(strconv.FormatFloat(i.month, 'g', -1, 64))
-		b.WriteRune('M')
+		b.WriteByte('M')
 	}
 	if i.day > 0 {
 		b.WriteString(strconv.FormatFloat(i.day, 'g', -1, 64))
-		b.WriteRune('D')
+		b.WriteByte('D')
 	}
 
 	// The designator [T] shall be absent if all of the time components are absent.
 	if i.hour > 0 || i.minute > 0 || i.second > 0 {
-		b.WriteRune('T')
+		b.WriteByte('T')
 
 		if i.hour > 0 {
 			b.WriteString(strconv.FormatFloat(i.hour, 'g', -1, 64))
-			b.WriteRune('H')
+			b.WriteByte('H')
 		}
 
 		if i.minute > 0 {
 			b.WriteString(strconv.FormatFloat(i.minute, 'g', -1, 64))
-			b.WriteRune('M')
+			b.WriteByte('M')
 		}
 
 		if i.second > 0 {
 			b.WriteString(strconv.FormatFloat(i.second, 'g', -1, 64))
-			b.WriteRune('S')
+			b.WriteByte('S')
 		}
 	}
 
