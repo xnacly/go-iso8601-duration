@@ -44,7 +44,7 @@ const (
 
 	// seen n
 	stateNumber
-	// seen [Y], [M], [D]
+	// seen [Y], [W], [M], [D]
 	stateDesignator
 
 	// start of Time: is used as time designator to indicate: the start of the representation of the number of hours, minutes or seconds in expressions of duration
@@ -222,8 +222,8 @@ func From(s string) (Duration, error) {
 					}
 					duration.month = float64(num)
 				case 'W':
-					if r.Len() != 0 {
-						return duration, wrapErr(NoDesignatorsAfterWeeksAllowed, col)
+					if duration.week != 0 {
+						return duration, wrapErr(DuplicateDesignator, col)
 					}
 					duration.week = float64(num)
 				case 'D':
@@ -337,12 +337,6 @@ func (i Duration) String() string {
 		return b.String()
 	}
 
-	if i.week > 0 {
-		b.WriteString(strconv.FormatFloat(i.week, 'g', -1, 64))
-		b.WriteByte('W')
-		return b.String()
-	}
-
 	if i.year > 0 {
 		b.WriteString(strconv.FormatFloat(i.year, 'g', -1, 64))
 		b.WriteByte('Y')
@@ -350,6 +344,10 @@ func (i Duration) String() string {
 	if i.month > 0 {
 		b.WriteString(strconv.FormatFloat(i.month, 'g', -1, 64))
 		b.WriteByte('M')
+	}
+	if i.week > 0 {
+		b.WriteString(strconv.FormatFloat(i.week, 'g', -1, 64))
+		b.WriteByte('W')
 	}
 	if i.day > 0 {
 		b.WriteString(strconv.FormatFloat(i.day, 'g', -1, 64))
