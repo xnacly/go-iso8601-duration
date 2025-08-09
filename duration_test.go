@@ -175,3 +175,14 @@ func TestDurationNegativeSign(t *testing.T) {
 		})
 	}
 }
+
+func TestDurationExplicitPositiveSign(t *testing.T) {
+	for _, tc := range testcases {
+		t.Run(tc.str, func(t *testing.T) {
+			s := "+" + tc.str
+			parsed, err := From(s)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.dur.Duration(), parsed.Duration())
+		})
+	}
+}
