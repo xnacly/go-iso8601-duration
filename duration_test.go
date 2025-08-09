@@ -66,6 +66,7 @@ var testcases = []struct {
 	{"PT15H", Duration{hour: 15}},
 	{"P1W", Duration{week: 1}},
 	{"P15W", Duration{week: 15}},
+	{"P1Y15W", Duration{year: 1, week: 15}},
 	{"P15Y", Duration{year: 15}},
 	{"P15Y3M", Duration{year: 15, month: 3}},
 	{"P15Y3M41D", Duration{year: 15, month: 3, day: 41}},
@@ -127,7 +128,6 @@ func TestDurationErr(t *testing.T) {
 		"P1YD",    // MissingNumber
 		"P111Y",   // TooManyNumbersForDesignator
 		"Z",       // MissingPDesignatorAtStart
-		"P15W2D",  // NoDesignatorsAfterWeeksAllowed
 	}
 
 	for _, i := range cases {
