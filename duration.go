@@ -1,17 +1,15 @@
 package goiso8601duration
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
+	"math"
 	"strconv"
 	"strings"
 	"time"
 	"unicode"
 )
-
-// This parser uses the examplary notion of allowing two numbers before any
-// designator, again, see: ISO8601 4.4.3.2 Format with designators
-const maxNumCount = 2
 
 // constants for roundtripping between time.Duration and Duration
 const (
@@ -59,7 +57,7 @@ const (
 
 type Duration struct {
 	hasNegativeSign                              bool
-	year, month, week, day, hour, minute, second float64
+	year, month, week, day, hour, minute, second int64
 }
 
 func FromDuration(d time.Duration) Duration {
@@ -67,44 +65,45 @@ func FromDuration(d time.Duration) Duration {
 	duration := Duration{}
 
 	years := float64(ns) / (float64(nsPerDay) * daysPerYear)
-	duration.year = float64(int(years)) // truncate to integer years
-	ns -= int64(duration.year * daysPerYear * float64(nsPerDay))
+	duration.year = int64(years) // truncate to integer years
+	ns -= int64(float64(duration.year) * daysPerYear * float64(nsPerDay))
 
 	months := float64(ns) / (float64(nsPerDay) * daysPerMonth)
-	duration.month = float64(int(months))
-	ns -= int64(duration.month * daysPerMonth * float64(nsPerDay))
+	duration.month = int64(months)
+	ns -= int64(float64(duration.month) * daysPerMonth * float64(nsPerDay))
 
 	weeks := ns / nsPerWeek
-	duration.week = float64(weeks)
+	duration.week = int64(weeks)
 	ns -= weeks * nsPerWeek
 
 	days := ns / nsPerDay
-	duration.day = float64(days)
+	duration.day = int64(days)
 	ns -= days * nsPerDay
 
 	hours := ns / nsPerHour
-	duration.hour = float64(hours)
+	duration.hour = int64(hours)
 	ns -= hours * nsPerHour
 
 	minutes := ns / nsPerMinute
-	duration.minute = float64(minutes)
+	duration.minute = int64(minutes)
 	ns -= minutes * nsPerMinute
 
-	duration.second = float64(ns) / float64(nsPerSecond)
+	duration.second = int64(float64(ns) / float64(nsPerSecond))
 
 	return duration
 }
 
-func numBufferToNumber(buf [maxNumCount]rune) int64 {
-	var i int
-	for _, n := range buf {
-		if n == 0 { // empty number (zero byte) in buffer, stop
-			break
+func numBufferToNumber(buf bytes.Buffer) (int64, error) {
+	var i int64
+	for _, n := range buf.Bytes() {
+		digit := int64(n - '0')
+		if i > (math.MaxInt64-digit)/10 {
+			return 0, DesignatorNumberTooLarge
 		}
-		i = (i * 10) + int(n-'0')
+		i = (i * 10) + digit
 	}
 
-	return int64(i)
+	return i, nil
 }
 
 // P[nn]Y[nn]M[nn]DT[nn]H[nn]M[nn]S or P[nn]W, as seen in
@@ -129,27 +128,12 @@ func From(s string) (Duration, error) {
 
 	curState := stateStart
 	var col uint8
-	var curNumCount uint8
-	var numBuf [maxNumCount]rune
+	numBuf := bytes.Buffer{}
 
 	r := strings.NewReader(s)
 
 	for {
 		b, size, err := r.ReadRune()
-
-		// This is for debugging purposes
-		// var stateToName = map[state]string{
-		// 	stateStart:       "Start",
-		// 	stateP:           "P",
-		// 	stateWDesignator: "WDesignator",
-		// 	stateNumber:      "Number",
-		// 	stateT:           "T",
-		// 	stateTNumber:     "TNumber",
-		// 	stateTDesignator: "TDesignator",
-		// 	stateFin:         "Fin",
-		// }
-		// fmt.Printf("| rune=%c | col=%d | state=%s | buf=%v\n", b, col, stateToName[curState], numBuf)
-
 		if err != nil {
 			if err != io.EOF {
 				return duration, wrapErr(UnexpectedReaderError, col)
@@ -188,99 +172,87 @@ func From(s string) (Duration, error) {
 			if b == 'T' {
 				curState = stateT
 			} else if unicode.IsDigit(b) {
-				if curNumCount > maxNumCount {
-					return duration, wrapErr(TooManyNumbersForDesignator, col)
-				}
-				numBuf[curNumCount] = b
-				curNumCount++
+				numBuf.WriteRune(b)
 				curState = stateNumber
 			} else {
 				return duration, wrapErr(MissingNumber, col)
 			}
 		case stateNumber:
 			if unicode.IsDigit(b) {
-				if curNumCount+1 > maxNumCount {
-					return duration, wrapErr(TooManyNumbersForDesignator, col)
-				}
-				numBuf[curNumCount] = b
-				curNumCount++
+				numBuf.WriteRune(b)
 				curState = stateNumber
 			} else if strings.ContainsRune(defaultDesignators, b) {
-				if curNumCount == 0 {
+				if numBuf.Len() == 0 {
 					return duration, wrapErr(MissingNumber, col)
 				}
-				num := numBufferToNumber(numBuf)
+				num, err := numBufferToNumber(numBuf)
+				if err != nil {
+					return duration, err
+				}
 				switch b {
 				case 'Y':
 					if duration.year != 0 {
 						return duration, wrapErr(DuplicateDesignator, col)
 					}
-					duration.year = float64(num)
+					duration.year = num
 				case 'M':
 					if duration.month != 0 {
 						return duration, wrapErr(DuplicateDesignator, col)
 					}
-					duration.month = float64(num)
+					duration.month = num
 				case 'W':
 					if duration.week != 0 {
 						return duration, wrapErr(DuplicateDesignator, col)
 					}
-					duration.week = float64(num)
+					duration.week = num
 				case 'D':
 					if duration.day != 0 {
 						return duration, wrapErr(DuplicateDesignator, col)
 					}
-					duration.day = float64(num)
+					duration.day = num
 				}
-				curNumCount = 0
-				numBuf = [maxNumCount]rune{}
+				numBuf.Reset()
 				curState = stateDesignator
 			} else {
 				return duration, wrapErr(UnknownDesignator, col)
 			}
 		case stateT, stateTDesignator:
 			if unicode.IsDigit(b) {
-				if curNumCount > maxNumCount {
-					return duration, wrapErr(TooManyNumbersForDesignator, col)
-				}
-				numBuf[curNumCount] = b
-				curNumCount++
+				numBuf.WriteRune(b)
 				curState = stateTNumber
 			} else {
 				return duration, wrapErr(MissingNumber, col)
 			}
 		case stateTNumber:
 			if unicode.IsDigit(b) {
-				if curNumCount+1 > maxNumCount {
-					return duration, wrapErr(TooManyNumbersForDesignator, col)
-				}
-				numBuf[curNumCount] = b
-				curNumCount++
+				numBuf.WriteRune(b)
 				curState = stateTNumber
 			} else if strings.ContainsRune(timeDesignators, b) {
-				if curNumCount == 0 {
+				if numBuf.Len() == 0 {
 					return duration, wrapErr(MissingNumber, col)
 				}
-				num := numBufferToNumber(numBuf)
+				num, err := numBufferToNumber(numBuf)
+				if err != nil {
+					return duration, err
+				}
 				switch b {
 				case 'H':
 					if duration.hour != 0 {
 						return duration, wrapErr(DuplicateDesignator, col)
 					}
-					duration.hour = float64(num)
+					duration.hour = num
 				case 'M':
 					if duration.minute != 0 {
 						return duration, wrapErr(DuplicateDesignator, col)
 					}
-					duration.minute = float64(num)
+					duration.minute = num
 				case 'S':
 					if duration.second != 0 {
 						return duration, wrapErr(DuplicateDesignator, col)
 					}
-					duration.second = float64(num)
+					duration.second = num
 				}
-				curNumCount = 0
-				numBuf = [maxNumCount]rune{}
+				numBuf.Reset()
 				curState = stateTDesignator
 			} else {
 				return duration, wrapErr(UnknownDesignator, col)
@@ -294,9 +266,9 @@ func From(s string) (Duration, error) {
 func (i Duration) Apply(t time.Time) time.Time {
 	newT := t.AddDate(int(i.year), int(i.month), int(i.day+i.week*7))
 	d := time.Duration(
-		(i.hour * float64(time.Hour)) +
-			(i.minute * float64(time.Minute)) +
-			(i.second * float64(time.Second)),
+		(i.hour * int64(time.Hour)) +
+			(i.minute * int64(time.Minute)) +
+			(i.second * int64(time.Second)),
 	)
 	if i.hasNegativeSign {
 		d = -d
@@ -307,13 +279,13 @@ func (i Duration) Apply(t time.Time) time.Time {
 func (i Duration) Duration() time.Duration {
 	var ns int64
 
-	ns += int64(i.year * daysPerYear * float64(nsPerDay))
-	ns += int64(i.month * daysPerMonth * float64(nsPerDay))
-	ns += int64(i.week * float64(nsPerWeek))
-	ns += int64(i.day * float64(nsPerDay))
-	ns += int64(i.hour * float64(nsPerHour))
-	ns += int64(i.minute * float64(nsPerMinute))
-	ns += int64(i.second * float64(nsPerSecond))
+	ns += int64(float64(i.year) * daysPerYear * float64(nsPerDay))
+	ns += int64(float64(i.month) * daysPerMonth * float64(nsPerDay))
+	ns += int64(float64(i.week) * float64(nsPerWeek))
+	ns += int64(float64(i.day) * float64(nsPerDay))
+	ns += int64(float64(i.hour) * float64(nsPerHour))
+	ns += int64(float64(i.minute) * float64(nsPerMinute))
+	ns += int64(float64(i.second) * float64(nsPerSecond))
 
 	if i.hasNegativeSign {
 		ns = -ns
@@ -338,19 +310,19 @@ func (i Duration) String() string {
 	}
 
 	if i.year > 0 {
-		b.WriteString(strconv.FormatFloat(i.year, 'g', -1, 64))
+		b.WriteString(strconv.FormatInt(i.year, 10))
 		b.WriteByte('Y')
 	}
 	if i.month > 0 {
-		b.WriteString(strconv.FormatFloat(i.month, 'g', -1, 64))
+		b.WriteString(strconv.FormatInt(i.month, 10))
 		b.WriteByte('M')
 	}
 	if i.week > 0 {
-		b.WriteString(strconv.FormatFloat(i.week, 'g', -1, 64))
+		b.WriteString(strconv.FormatInt(i.week, 10))
 		b.WriteByte('W')
 	}
 	if i.day > 0 {
-		b.WriteString(strconv.FormatFloat(i.day, 'g', -1, 64))
+		b.WriteString(strconv.FormatInt(i.day, 10))
 		b.WriteByte('D')
 	}
 
@@ -359,17 +331,17 @@ func (i Duration) String() string {
 		b.WriteByte('T')
 
 		if i.hour > 0 {
-			b.WriteString(strconv.FormatFloat(i.hour, 'g', -1, 64))
+			b.WriteString(strconv.FormatInt(i.hour, 10))
 			b.WriteByte('H')
 		}
 
 		if i.minute > 0 {
-			b.WriteString(strconv.FormatFloat(i.minute, 'g', -1, 64))
+			b.WriteString(strconv.FormatInt(i.minute, 10))
 			b.WriteByte('M')
 		}
 
 		if i.second > 0 {
-			b.WriteString(strconv.FormatFloat(i.second, 'g', -1, 64))
+			b.WriteString(strconv.FormatInt(i.second, 10))
 			b.WriteByte('S')
 		}
 	}
