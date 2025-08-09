@@ -126,8 +126,8 @@ func TestDurationErr(t *testing.T) {
 		"P1A",     // UnknownDesignator
 		"P12D12D", // DuplicateDesignator
 		"P1YD",    // MissingNumber
-		"P111Y",   // TooManyNumbersForDesignator
-		"Z",       // MissingPDesignatorAtStart
+		"P1111111111111111111111111111111111111Y", // DesignatorNumberTooLarge
+		"Z", // MissingPDesignatorAtStart
 	}
 
 	for _, i := range cases {
