@@ -7,7 +7,6 @@ import (
 
 var (
 	UnexpectedEof             = errors.New("Unexpected EOF in duration format string")
-	UnexpectedReaderError     = errors.New("Failed to retrieve next byte of duration format string")
 	UnexpectedNonAsciiRune    = errors.New("Unexpected non ascii component in duration format string")
 	MissingDesignator         = errors.New("Missing unit designator")
 	UnknownDesignator         = errors.New("Unknown designator, expected YMWD or after a T, HMS")
@@ -19,10 +18,10 @@ var (
 
 type ISO8601DurationError struct {
 	Inner  error
-	Column uint8
+	Column int
 }
 
-func wrapErr(inner error, col uint8) error {
+func wrapErr(inner error, col int) error {
 	return ISO8601DurationError{
 		Inner:  inner,
 		Column: col,
