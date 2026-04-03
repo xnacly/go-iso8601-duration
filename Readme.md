@@ -1,6 +1,6 @@
 # Go ISO8601 Duration
 
-A small libary for parsing
+A small, zero alloc and high performance libary for parsing
 [ISO8601](https://en.wikipedia.org/wiki/ISO_8601#Durations) compliant duration
 format into Go time compatible representation.
 
@@ -86,4 +86,12 @@ func main() {
 	// {In:PT12M43S}
 	fmt.Printf("%+v\n", a)
 }
+```
+
+## Benchmarks
+
+Reproduce with:
+
+```text
+go test -bench=. -benchmem
 ```
