@@ -1,7 +1,6 @@
 package goiso8601duration
 
 import (
-	"bytes"
 	"encoding/json"
 	"io"
 	"math"
@@ -91,19 +90,6 @@ func FromDuration(d time.Duration) Duration {
 	duration.second = int64(float64(ns) / float64(nsPerSecond))
 
 	return duration
-}
-
-func numBufferToNumber(buf bytes.Buffer) (int64, error) {
-	var i int64
-	for _, n := range buf.Bytes() {
-		digit := int64(n - '0')
-		if i > (math.MaxInt64-digit)/10 {
-			return 0, DesignatorNumberTooLarge
-		}
-		i = (i * 10) + digit
-	}
-
-	return i, nil
 }
 
 // P[nn]Y[nn]M[nn]DT[nn]H[nn]M[nn]S or P[nn]W, as seen in
