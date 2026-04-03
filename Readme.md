@@ -94,4 +94,21 @@ Reproduce with:
 
 ```text
 go test -bench=. -benchmem
+goos: linux
+goarch: amd64
+pkg: github.com/xnacly/go-iso8601-duration
+cpu: AMD Ryzen 7 3700X 8-Core Processor
+BenchmarkDuration/P0D-16                100000000               10.51 ns/op            0 B/op          0 allocs/op
+BenchmarkDuration/PT15H-16              80446293                14.58 ns/op            0 B/op          0 allocs/op
+BenchmarkDuration/P1W-16                100000000               10.33 ns/op            0 B/op          0 allocs/op
+BenchmarkDuration/P15W-16               93517448                12.75 ns/op            0 B/op          0 allocs/op
+BenchmarkDuration/P1Y15W-16             70472916                17.19 ns/op            0 B/op          0 allocs/op
+BenchmarkDuration/P15Y-16               89461000                12.75 ns/op            0 B/op          0 allocs/op
+BenchmarkDuration/P15Y3M-16             61222558                18.65 ns/op            0 B/op          0 allocs/op
+BenchmarkDuration/P15Y3M41D-16          46391493                25.45 ns/op            0 B/op          0 allocs/op
+BenchmarkDuration/PT15M-16              80630947                14.98 ns/op            0 B/op          0 allocs/op
+BenchmarkDuration/PT15M10S-16           55008163                22.14 ns/op            0 B/op          0 allocs/op
+BenchmarkDuration/P3Y6M4DT12H30M5S-16   24965916                46.99 ns/op            0 B/op          0 allocs/op
+PASS
+ok      github.com/xnacly/go-iso8601-duration   12.956s
 ```
