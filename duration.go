@@ -23,16 +23,6 @@ const (
 // From is a FSM, see https://en.wikipedia.org/wiki/Finite-state_machine
 type state = uint8
 
-// In representations of duration,
-// the following designators are used as part of the expression,
-// see the doc comment of the function
-//
-// [Y] [M] [W] [D] [H] [M] [S]
-const (
-	defaultDesignators = "YMWD"
-	timeDesignators    = "MHS"
-)
-
 const (
 	stateStart state = iota
 	// start of duration: is used as duration designator, preceding the component which represents the duration;
@@ -152,7 +142,7 @@ func From(s string) (Duration, error) {
 				num = (num * 10) + digit
 				hasNum = true
 				curState = stateNumber
-			} else if strings.ContainsRune(defaultDesignators, b) {
+			} else {
 				if !hasNum {
 					return duration, wrapErr(MissingNumber, col)
 				}
@@ -177,11 +167,12 @@ func From(s string) (Duration, error) {
 						return duration, wrapErr(DuplicateDesignator, col)
 					}
 					duration.day = num
+				default:
+
+					return duration, wrapErr(UnknownDesignator, col)
 				}
 				num = 0
 				curState = stateDesignator
-			} else {
-				return duration, wrapErr(UnknownDesignator, col)
 			}
 		case stateT, stateTDesignator:
 			if '0' <= b && b <= '9' {
@@ -204,7 +195,7 @@ func From(s string) (Duration, error) {
 				num = (num * 10) + digit
 				hasNum = true
 				curState = stateTNumber
-			} else if strings.ContainsRune(timeDesignators, b) {
+			} else {
 				if !hasNum {
 					return duration, wrapErr(MissingNumber, col)
 				}
@@ -224,11 +215,12 @@ func From(s string) (Duration, error) {
 						return duration, wrapErr(DuplicateDesignator, col)
 					}
 					duration.second = num
+				default:
+
+					return duration, wrapErr(UnknownDesignator, col)
 				}
 				num = 0
 				curState = stateTDesignator
-			} else {
-				return duration, wrapErr(UnknownDesignator, col)
 			}
 		case stateFin:
 			return duration, nil
