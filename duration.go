@@ -128,7 +128,8 @@ func From(s string) (Duration, error) {
 
 	curState := stateStart
 	var col uint8
-	numBuf := *bytes.NewBuffer(make([]byte, 0, 8))
+	var num int64
+	var hasNum bool
 	r := strings.NewReader(s)
 
 	for {
@@ -171,22 +172,24 @@ func From(s string) (Duration, error) {
 			if b == 'T' {
 				curState = stateT
 			} else if unicode.IsDigit(b) {
-				numBuf.WriteRune(b)
+				num = (num * 10) + int64(b-'0')
+				hasNum = true
 				curState = stateNumber
 			} else {
 				return duration, wrapErr(MissingNumber, col)
 			}
 		case stateNumber:
 			if unicode.IsDigit(b) {
-				numBuf.WriteRune(b)
+				digit := int64(b - '0')
+				if num > (math.MaxInt64-digit)/10 {
+					return duration, DesignatorNumberTooLarge
+				}
+				num = (num * 10) + digit
+				hasNum = true
 				curState = stateNumber
 			} else if strings.ContainsRune(defaultDesignators, b) {
-				if numBuf.Len() == 0 {
+				if !hasNum {
 					return duration, wrapErr(MissingNumber, col)
-				}
-				num, err := numBufferToNumber(numBuf)
-				if err != nil {
-					return duration, err
 				}
 				switch b {
 				case 'Y':
@@ -210,29 +213,35 @@ func From(s string) (Duration, error) {
 					}
 					duration.day = num
 				}
-				numBuf.Reset()
+				num = 0
 				curState = stateDesignator
 			} else {
 				return duration, wrapErr(UnknownDesignator, col)
 			}
 		case stateT, stateTDesignator:
 			if unicode.IsDigit(b) {
-				numBuf.WriteRune(b)
+				digit := int64(b - '0')
+				if num > (math.MaxInt64-digit)/10 {
+					return duration, DesignatorNumberTooLarge
+				}
+				num = (num * 10) + digit
+				hasNum = true
 				curState = stateTNumber
 			} else {
 				return duration, wrapErr(MissingNumber, col)
 			}
 		case stateTNumber:
 			if unicode.IsDigit(b) {
-				numBuf.WriteRune(b)
+				digit := int64(b - '0')
+				if num > (math.MaxInt64-digit)/10 {
+					return duration, DesignatorNumberTooLarge
+				}
+				num = (num * 10) + digit
+				hasNum = true
 				curState = stateTNumber
 			} else if strings.ContainsRune(timeDesignators, b) {
-				if numBuf.Len() == 0 {
+				if !hasNum {
 					return duration, wrapErr(MissingNumber, col)
-				}
-				num, err := numBufferToNumber(numBuf)
-				if err != nil {
-					return duration, err
 				}
 				switch b {
 				case 'H':
@@ -251,7 +260,7 @@ func From(s string) (Duration, error) {
 					}
 					duration.second = num
 				}
-				numBuf.Reset()
+				num = 0
 				curState = stateTDesignator
 			} else {
 				return duration, wrapErr(UnknownDesignator, col)
