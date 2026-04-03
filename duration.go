@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode"
 )
 
 // constants for roundtripping between time.Duration and Duration
@@ -157,7 +156,7 @@ func From(s string) (Duration, error) {
 		case stateP, stateDesignator:
 			if b == 'T' {
 				curState = stateT
-			} else if unicode.IsDigit(b) {
+			} else if '0' <= b && b <= '9' {
 				num = (num * 10) + int64(b-'0')
 				hasNum = true
 				curState = stateNumber
@@ -165,7 +164,7 @@ func From(s string) (Duration, error) {
 				return duration, wrapErr(MissingNumber, col)
 			}
 		case stateNumber:
-			if unicode.IsDigit(b) {
+			if '0' <= b && b <= '9' {
 				digit := int64(b - '0')
 				if num > (math.MaxInt64-digit)/10 {
 					return duration, DesignatorNumberTooLarge
@@ -205,7 +204,7 @@ func From(s string) (Duration, error) {
 				return duration, wrapErr(UnknownDesignator, col)
 			}
 		case stateT, stateTDesignator:
-			if unicode.IsDigit(b) {
+			if '0' <= b && b <= '9' {
 				digit := int64(b - '0')
 				if num > (math.MaxInt64-digit)/10 {
 					return duration, DesignatorNumberTooLarge
@@ -217,7 +216,7 @@ func From(s string) (Duration, error) {
 				return duration, wrapErr(MissingNumber, col)
 			}
 		case stateTNumber:
-			if unicode.IsDigit(b) {
+			if '0' <= b && b <= '9' {
 				digit := int64(b - '0')
 				if num > (math.MaxInt64-digit)/10 {
 					return duration, DesignatorNumberTooLarge
