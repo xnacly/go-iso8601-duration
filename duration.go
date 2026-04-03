@@ -2,11 +2,11 @@ package goiso8601duration
 
 import (
 	"encoding/json"
-	"io"
 	"math"
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 )
 
 // constants for roundtripping between time.Duration and Duration
@@ -112,33 +112,13 @@ func From(s string) (Duration, error) {
 	}
 
 	curState := stateStart
-	var col uint8
 	var num int64
 	var hasNum bool
-	r := strings.NewReader(s)
 
-	for {
-		b, size, err := r.ReadRune()
-		if err != nil {
-			if err != io.EOF {
-				return duration, wrapErr(UnexpectedReaderError, col)
-			} else if curState == stateP {
-				// being in stateP at the end (io.EOF) means we havent
-				// encountered anything after the P, so there were no numbers
-				// or states
-				return duration, wrapErr(UnexpectedEof, col)
-			} else if curState == stateNumber || curState == stateTNumber {
-				// if we are in the state of Number or TNumber we had a number
-				// but no designator at the end
-				return duration, wrapErr(MissingDesignator, col)
-			} else {
-				curState = stateFin
-			}
-		}
-		if size > 1 {
+	for col, b := range s {
+		if b > unicode.MaxASCII {
 			return duration, wrapErr(UnexpectedNonAsciiRune, col)
 		}
-		col++
 
 		switch curState {
 		case stateStart:
@@ -253,6 +233,19 @@ func From(s string) (Duration, error) {
 		case stateFin:
 			return duration, nil
 		}
+	}
+
+	if curState == stateP {
+		// being in stateP at the end (io.EOF) means we havent
+		// encountered anything after the P, so there were no numbers
+		// or states
+		return duration, wrapErr(UnexpectedEof, len(s))
+	} else if curState == stateNumber || curState == stateTNumber {
+		// if we are in the state of Number or TNumber we had a number
+		// but no designator at the end
+		return duration, wrapErr(MissingDesignator, len(s))
+	} else {
+		return duration, nil
 	}
 }
 
