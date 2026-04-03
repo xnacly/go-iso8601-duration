@@ -63,7 +63,6 @@ var testcases = []struct {
 }{
 	{"P0D", Duration{}},
 	{"PT15H", Duration{hour: 15}},
-	{"PT15H", Duration{hour: 15}},
 	{"P1W", Duration{week: 1}},
 	{"P15W", Duration{week: 15}},
 	{"P1Y15W", Duration{year: 1, week: 15}},
@@ -83,6 +82,16 @@ var testcases = []struct {
 			second: 5,
 		},
 	},
+}
+
+func BenchmarkDuration(b *testing.B) {
+	for _, i := range testcases {
+		b.Run(i.str, func(b *testing.B) {
+			for n := 0; n < b.N; n++ {
+				_, _ = From(i.str)
+			}
+		})
+	}
 }
 
 func TestDurationStringer(t *testing.T) {

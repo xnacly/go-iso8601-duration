@@ -128,8 +128,7 @@ func From(s string) (Duration, error) {
 
 	curState := stateStart
 	var col uint8
-	numBuf := bytes.Buffer{}
-
+	numBuf := *bytes.NewBuffer(make([]byte, 0, 8))
 	r := strings.NewReader(s)
 
 	for {
