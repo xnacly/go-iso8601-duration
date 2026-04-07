@@ -7,7 +7,6 @@ import (
 
 var (
 	UnexpectedEof             = errors.New("Unexpected EOF in duration format string")
-	UnexpectedNonAsciiRune    = errors.New("Unexpected non ascii component in duration format string")
 	MissingDesignator         = errors.New("Missing unit designator")
 	UnknownDesignator         = errors.New("Unknown designator, expected YMWD or after a T, HMS")
 	DuplicateDesignator       = errors.New("Duplicate designator")
