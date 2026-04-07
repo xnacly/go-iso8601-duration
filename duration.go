@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode"
 )
 
 // constants for roundtripping between time.Duration and Duration
@@ -105,11 +104,7 @@ func From(s string) (Duration, error) {
 	var num int64
 	var hasNum bool
 
-	for col, b := range s {
-		if b > unicode.MaxASCII {
-			return duration, wrapErr(UnexpectedNonAsciiRune, col)
-		}
-
+	for col, b := range []byte(s) {
 		switch curState {
 		case stateStart:
 			switch b {
