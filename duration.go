@@ -101,7 +101,7 @@ func From(s string) (Duration, error) {
 	}
 
 	curState := stateStart
-	var num int64
+	var num uint64
 	var hasNum bool
 
 	for col, b := range []byte(s) {
@@ -122,7 +122,7 @@ func From(s string) (Duration, error) {
 			if b == 'T' {
 				curState = stateT
 			} else if '0' <= b && b <= '9' {
-				num = (num * 10) + int64(b-'0')
+				num = (num * 10) + uint64(b-'0')
 				hasNum = true
 				curState = stateNumber
 			} else {
@@ -130,40 +130,40 @@ func From(s string) (Duration, error) {
 			}
 		case stateNumber:
 			if '0' <= b && b <= '9' {
-				digit := int64(b - '0')
-				if num > (math.MaxInt64-digit)/10 {
-					return duration, DesignatorNumberTooLarge
-				}
-				num = (num * 10) + digit
+				num = (num * 10) + uint64(b-'0')
 				hasNum = true
 				curState = stateNumber
 			} else {
 				if !hasNum {
 					return duration, wrapErr(MissingNumber, col)
 				}
+
+				if num > math.MaxInt64 {
+					return duration, DesignatorNumberTooLarge
+				}
+
 				switch b {
 				case 'Y':
 					if duration.year != 0 {
 						return duration, wrapErr(DuplicateDesignator, col)
 					}
-					duration.year = num
+					duration.year = int64(num)
 				case 'M':
 					if duration.month != 0 {
 						return duration, wrapErr(DuplicateDesignator, col)
 					}
-					duration.month = num
+					duration.month = int64(num)
 				case 'W':
 					if duration.week != 0 {
 						return duration, wrapErr(DuplicateDesignator, col)
 					}
-					duration.week = num
+					duration.week = int64(num)
 				case 'D':
 					if duration.day != 0 {
 						return duration, wrapErr(DuplicateDesignator, col)
 					}
-					duration.day = num
+					duration.day = int64(num)
 				default:
-
 					return duration, wrapErr(UnknownDesignator, col)
 				}
 				num = 0
@@ -171,11 +171,7 @@ func From(s string) (Duration, error) {
 			}
 		case stateT, stateTDesignator:
 			if '0' <= b && b <= '9' {
-				digit := int64(b - '0')
-				if num > (math.MaxInt64-digit)/10 {
-					return duration, DesignatorNumberTooLarge
-				}
-				num = (num * 10) + digit
+				num = (num * 10) + uint64(b-'0')
 				hasNum = true
 				curState = stateTNumber
 			} else {
@@ -183,35 +179,33 @@ func From(s string) (Duration, error) {
 			}
 		case stateTNumber:
 			if '0' <= b && b <= '9' {
-				digit := int64(b - '0')
-				if num > (math.MaxInt64-digit)/10 {
-					return duration, DesignatorNumberTooLarge
-				}
-				num = (num * 10) + digit
+				num = (num * 10) + uint64(b-'0')
 				hasNum = true
 				curState = stateTNumber
 			} else {
 				if !hasNum {
 					return duration, wrapErr(MissingNumber, col)
 				}
+				if num > math.MaxInt64 {
+					return duration, DesignatorNumberTooLarge
+				}
 				switch b {
 				case 'H':
 					if duration.hour != 0 {
 						return duration, wrapErr(DuplicateDesignator, col)
 					}
-					duration.hour = num
+					duration.hour = int64(num)
 				case 'M':
 					if duration.minute != 0 {
 						return duration, wrapErr(DuplicateDesignator, col)
 					}
-					duration.minute = num
+					duration.minute = int64(num)
 				case 'S':
 					if duration.second != 0 {
 						return duration, wrapErr(DuplicateDesignator, col)
 					}
-					duration.second = num
+					duration.second = int64(num)
 				default:
-
 					return duration, wrapErr(UnknownDesignator, col)
 				}
 				num = 0
