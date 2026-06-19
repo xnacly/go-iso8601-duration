@@ -2,6 +2,7 @@ package goiso8601duration
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -143,6 +144,37 @@ func TestDurationErr(t *testing.T) {
 		t.Run(i, func(t *testing.T) {
 			_, err := From(i)
 			assert.Error(t, err)
+		})
+	}
+}
+
+func TestFromMalformed(t *testing.T) {
+	cases := []struct {
+		str     string
+		wantErr error
+	}{
+		{"-", MissingPDesignatorAtStart},  // bare negative sign, never reaches P
+		{"+", MissingPDesignatorAtStart},  // bare positive sign, never reaches P
+		{"--", MissingPDesignatorAtStart}, // repeated sign, never reaches P
+		{"+-", MissingPDesignatorAtStart}, // mixed signs, never reaches P
+		{"-+", MissingPDesignatorAtStart}, // mixed signs, never reaches P
+		{"PT", UnexpectedEof},             // T must be followed by a time component
+		{"P1YT", UnexpectedEof},           // dangling T after a valid date component
+		{"P0Y0Y", DuplicateDesignator},    // zero-valued year still counts as seen
+		{"P0M0M", DuplicateDesignator},    // zero-valued month still counts as seen
+		{"PT0H0H", DuplicateDesignator},   // zero-valued hour still counts as seen
+		{"PT0M0M", DuplicateDesignator},   // zero-valued minute still counts as seen
+		{"PT0S0S", DuplicateDesignator},   // zero-valued second still counts as seen
+		{"P0W0W", DuplicateDesignator},    // zero-valued week still counts as seen
+		{"P0D0D", DuplicateDesignator},    // zero-valued day still counts as seen
+		{"P", UnexpectedEof},              // duration designator without components
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.str, func(t *testing.T) {
+			_, err := From(tc.str)
+			assert.Error(t, err)
+			assert.True(t, errors.Is(err, tc.wantErr), "got %v, want %v", err, tc.wantErr)
 		})
 	}
 }

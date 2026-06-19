@@ -96,18 +96,18 @@ Reproduce with:
 goos: linux
 goarch: amd64
 pkg: github.com/xnacly/go-iso8601-duration
-cpu: AMD Ryzen 7 3700X 8-Core Processor
-BenchmarkDuration/P0D-16                120725466                9.931 ns/op           0 B/o       0 allocs/op
-BenchmarkDuration/PT15H-16              92520681                11.67 ns/op            0 B/o       0 allocs/op
-BenchmarkDuration/P1W-16                100000000               10.15 ns/op            0 B/o       0 allocs/op
-BenchmarkDuration/P15W-16               100000000               10.26 ns/op            0 B/o       0 allocs/op
-BenchmarkDuration/P1Y15W-16             82810779                14.83 ns/op            0 B/o       0 allocs/op
-BenchmarkDuration/P15Y-16               120902158               10.29 ns/op            0 B/o       0 allocs/op
-BenchmarkDuration/P15Y3M-16             75393909                15.68 ns/op            0 B/o       0 allocs/op
-BenchmarkDuration/P15Y3M41D-16          56214748                22.31 ns/op            0 B/o       0 allocs/op
-BenchmarkDuration/PT15M-16              91787005                12.85 ns/op            0 B/o       0 allocs/op
-BenchmarkDuration/PT15M10S-16           53683030                19.45 ns/op            0 B/o       0 allocs/op
-BenchmarkDuration/P3Y6M4DT12H30M5S-16   28636116                42.47 ns/op            0 B/op      0 allocs/op
+cpu: Intel(R) Core(TM) Ultra 9 275HX
+BenchmarkDuration/P0D-24                        165412600                 6.97 ns/op           0 B/op          0 allocs/op
+BenchmarkDuration/PT15H-24                      155630031                 7.80 ns/op           0 B/op          0 allocs/op
+BenchmarkDuration/P1W-24                        171056552                 7.08 ns/op           0 B/op          0 allocs/op
+BenchmarkDuration/P15W-24                       163372800                 7.00 ns/op           0 B/op          0 allocs/op
+BenchmarkDuration/P1Y15W-24                     145697648                 8.48 ns/op           0 B/op          0 allocs/op
+BenchmarkDuration/P15Y-24                       160867038                 7.13 ns/op           0 B/op          0 allocs/op
+BenchmarkDuration/P15Y3M-24                     147443806                 8.57 ns/op           0 B/op          0 allocs/op
+BenchmarkDuration/P15Y3M41D-24                   99545108                11.50 ns/op           0 B/op          0 allocs/op
+BenchmarkDuration/PT15M-24                      152095197                 7.46 ns/op           0 B/op          0 allocs/op
+BenchmarkDuration/PT15M10S-24                   100000000                11.59 ns/op           0 B/op          0 allocs/op
+BenchmarkDuration/P3Y6M4DT12H30M5S-24            57697164                25.43 ns/op           0 B/op          0 allocs/op
 PASS
-ok      github.com/xnacly/go-iso8601-duration   14.860s
+ok      github.com/xnacly/go-iso8601-duration   20.435s
 ```

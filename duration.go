@@ -38,8 +38,16 @@ const (
 	stateTNumber
 	// seen [H], [M], [S]
 	stateTDesignator
+)
 
-	stateFin
+const (
+	seenYear uint8 = 1 << iota
+	seenMonth
+	seenWeek
+	seenDay
+	seenHour
+	seenMinute
+	seenSecond
 )
 
 type Duration struct {
@@ -103,6 +111,7 @@ func From(s string) (Duration, error) {
 	curState := stateStart
 	var num uint64
 	var hasNum bool
+	var seen uint8
 
 	for col, b := range []byte(s) {
 		switch curState {
@@ -144,24 +153,28 @@ func From(s string) (Duration, error) {
 
 				switch b {
 				case 'Y':
-					if duration.year != 0 {
+					if seen&seenYear != 0 {
 						return duration, wrapErr(DuplicateDesignator, col)
 					}
+					seen |= seenYear
 					duration.year = int64(num)
 				case 'M':
-					if duration.month != 0 {
+					if seen&seenMonth != 0 {
 						return duration, wrapErr(DuplicateDesignator, col)
 					}
+					seen |= seenMonth
 					duration.month = int64(num)
 				case 'W':
-					if duration.week != 0 {
+					if seen&seenWeek != 0 {
 						return duration, wrapErr(DuplicateDesignator, col)
 					}
+					seen |= seenWeek
 					duration.week = int64(num)
 				case 'D':
-					if duration.day != 0 {
+					if seen&seenDay != 0 {
 						return duration, wrapErr(DuplicateDesignator, col)
 					}
+					seen |= seenDay
 					duration.day = int64(num)
 				default:
 					return duration, wrapErr(UnknownDesignator, col)
@@ -191,19 +204,22 @@ func From(s string) (Duration, error) {
 				}
 				switch b {
 				case 'H':
-					if duration.hour != 0 {
+					if seen&seenHour != 0 {
 						return duration, wrapErr(DuplicateDesignator, col)
 					}
+					seen |= seenHour
 					duration.hour = int64(num)
 				case 'M':
-					if duration.minute != 0 {
+					if seen&seenMinute != 0 {
 						return duration, wrapErr(DuplicateDesignator, col)
 					}
+					seen |= seenMinute
 					duration.minute = int64(num)
 				case 'S':
-					if duration.second != 0 {
+					if seen&seenSecond != 0 {
 						return duration, wrapErr(DuplicateDesignator, col)
 					}
+					seen |= seenSecond
 					duration.second = int64(num)
 				default:
 					return duration, wrapErr(UnknownDesignator, col)
@@ -211,22 +227,27 @@ func From(s string) (Duration, error) {
 				num = 0
 				curState = stateTDesignator
 			}
-		case stateFin:
-			return duration, nil
 		}
 	}
 
-	if curState == stateP {
+	switch curState {
+	case stateDesignator, stateTDesignator:
+		return duration, nil
+	case stateP:
 		// being in stateP at the end (io.EOF) means we havent
 		// encountered anything after the P, so there were no numbers
 		// or states
 		return duration, wrapErr(UnexpectedEof, len(s))
-	} else if curState == stateNumber || curState == stateTNumber {
+	case stateNumber, stateTNumber:
 		// if we are in the state of Number or TNumber we had a number
 		// but no designator at the end
 		return duration, wrapErr(MissingDesignator, len(s))
-	} else {
-		return duration, nil
+	case stateT:
+		return duration, wrapErr(UnexpectedEof, len(s))
+	case stateStart:
+		return duration, wrapErr(MissingPDesignatorAtStart, len(s))
+	default:
+		return duration, wrapErr(UnexpectedEof, len(s))
 	}
 }
 

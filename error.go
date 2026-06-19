@@ -34,3 +34,7 @@ func (i ISO8601DurationError) String() string {
 func (i ISO8601DurationError) Error() string {
 	return i.String()
 }
+
+func (i ISO8601DurationError) Unwrap() error {
+	return i.Inner
+}
